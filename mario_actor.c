@@ -1,56 +1,88 @@
 #include <stdio.h>
+#include <stdlib.h>
 
-int max_work_days(int jobs[][2], int n, int u, int v) {
-    int max_days = 0;
-    for (int i = 0; i < n; i++) {
-        if (jobs[i][0] < u || jobs[i][1] > v)
-            continue;
-        int days = jobs[i][1] - jobs[i][0];
+typedef struct {
+        int start;
+        int end;
+        int duration;        // end - start
+} Job;
 
-
+// Comparison function to sort by end time ascending
+int cmp(const void* a, const void* b) {
+    Job* j1 = (Job*)a;
+    Job* j2 = (Job*)b;
+    if (j1->end != j2->end) {
+        return j1->end - j2->end;
+    } else {
+        return j1->start - j2->start;
     }
-    return max_days;
 }
 
-int main() {
-    int n, u, v;
+int main(void) {
+    int n;
     scanf("%d", &n);
-    int jobs[n][2];
-    for (int i = 0; i < n; i++)
-        scanf("%d %d", &jobs[i][0], &jobs[i][1]);
-    scanf("%d %d", &u, &v);
 
-    // sort jobs by their start time and end time
-    for (int i = 0; i < n - 1; i++) {
-        for (int j = 0; j < n - i - 1; j++) {
-            if (jobs[j][0] > jobs[j + 1][0]) {
-                int temp[2];
-                temp[0] = jobs[j][0];
-                temp[1] = jobs[j][1];
-                jobs[j][0] = jobs[j + 1][0];
-                jobs[j][1] = jobs[j + 1][1];
-                jobs[j + 1][0] = temp[0];
-                jobs[j + 1][1] = temp[1];
-            } else if (jobs[j][0] == jobs[j + 1][0]) {
-                if (jobs[j][1] > jobs[j + 1][1]) {
-                    int temp[2];
-                    temp[0] = jobs[j][0];
-                    temp[1] = jobs[j][1];
-                    jobs[j][0] = jobs[j + 1][0];
-                    jobs[j][1] = jobs[j + 1][1];
-                    jobs[j + 1][0] = temp[0];
-                    jobs[j + 1][1] = temp[1];
-                }
-            }
-        }
+    Job allJobs[n];
+    for (int i = 0; i < n; i++) {
+        scanf("%d %d", &allJobs[i].start, &allJobs[i].end);
     }
 
-    printf("Jobs:\n");
-    for (int i = 0; i < n; i++)
-        printf("%d %d\n", jobs[i][0], jobs[i][1]);
-    printf("available time: %d to %d\n", u, v);
+    int u, v;
+    scanf("%d %d", &u, &v);
 
-    // printf("%d\n", max_work_days(jobs, n, u, v));
+    // 1) Filter: keep only intervals fully in [u, v].
+    Job valid[n];
+    int count = 0;
+    for (int i = 0; i < n; i++) {
+        if (allJobs[i].start >= u && allJobs[i].end <= v) {
+            valid[count].start = allJobs[i].start;
+            valid[count].end = allJobs[i].end;
+            valid[count].duration = valid[count].end - valid[count].start;
+            count++;
+        }
+    }
+    // If none remain, answer is 0
+    if (count == 0) {
+        printf("0\n");
+        return 0;
+    }
 
+    // 2) Sort by end time
+    qsort(valid, count, sizeof(Job), cmp);
+
+    // 3) Build array p[] in O(n) using a two-pointer technique
+    int p[count];
+    int j = -1;        // pointer to the "previous" job
+    for (int i = 0; i < count; i++) {
+        // Move j forward as far as possible where valid[j].end <=
+        // valid[i].start
+        while (j + 1 < i && valid[j + 1].end <= valid[i].start) {
+            j++;
+        }
+        // Now j is the largest index < i with end <= start[i], or -1 if none
+        p[i] = (j >= 0 && valid[j].end <= valid[i].start) ? j : -1;
+    }
+
+    // 4) DP to find max total duration
+    //    dp[i] = max total duration using intervals up to index i
+    int dp[count];
+    dp[0] = valid[0].duration;        // best we can do with only the first job
+
+    for (int i = 1; i < count; i++) {
+        // Option1: skip interval i
+        int skip = dp[i - 1];
+
+        // Option2: take interval i
+        int take = valid[i].duration;
+        if (p[i] != -1) {
+            take += dp[p[i]];
+        }
+
+        // dp[i] = best of skipping or taking
+        dp[i] = (skip > take) ? skip : take;
+    }
+
+    // The answer is dp[count - 1]
+    printf("%d\n", dp[count - 1]);
     return 0;
 }

@@ -1,15 +1,19 @@
 import random
 
+
 def generate_test_file(filename, count):
-    with open(filename, 'w') as f:
-        for _ in range(count):
-            # Generate an integer in the range [-100, 100]
-            value = random.randint(-100, 100)
-            # Write one integer per line
-            f.write(str(value) + '\n')
+    with open(filename, "w") as f:
+        f.write(str(count) + "\n")
+        for _ in range(count + 1):
+            value1 = random.randint(1, 3650)
+            value2 = random.randint(1, 3650)
+            if value1 > value2:
+                value1, value2 = value2, value1
+            if value1 == value2:
+                value2 += 1
+            f.write(str(f"{value1} {value2}") + "\n")
 
-# Generate a1000.in with 1,000 numbers
-generate_test_file('a1000.in', 1000)
 
-# Generate a100000.in with 100,000 numbers
-generate_test_file('a100000.in', 100000)
+n = random.randint(1, 1000)
+
+generate_test_file("a.in", n)
